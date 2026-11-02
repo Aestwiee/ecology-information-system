@@ -47,16 +47,14 @@ class EcoPoint:
         
     def get_marker_color(self) -> str:
         """Определяет цвет маркера для карты на основе вычисленной надежности"""
-        # Вызываем твой метод математической модели, который возвращает % надежности
         percentage = self.math_model()
-        
-        # Простая и надежная логика выбора цвета по Закону Деметры
+    
         if percentage >= 75:
-            return "green"      # Пункт работает отлично
+            return "green"
         elif 40 <= percentage < 75:
-            return "orange"     # Статус под вопросом (есть жалобы)
+            return "orange"
         else:
-            return "red"        # Пункт переполнен или закрыт
+            return "red"
 
         
 

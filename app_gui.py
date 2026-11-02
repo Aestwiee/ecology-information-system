@@ -42,8 +42,18 @@ class EcoApp(ctk.CTk):
         self.role_selector.grid(row=2, column=0, padx=20, pady=(5, 10), sticky='ew')
         self.role_selector.set('Физ.Лицо')
 
+        self.search_label = ctk.CTkLabel(self.sidebar, text="Поиск по сырью:", font=ctk.CTkFont(size=12))
+        self.search_label.grid(row=3, column=0, padx=20, pady=(10, 0), sticky="w")
+        
+        self.search_entry = ctk.CTkEntry(self.sidebar, placeholder_text="Например: PET или Стекло")
+        self.search_entry.grid(row=4, column=0, padx=20, pady=(5, 10), sticky="ew")
+        
+        self.search_entry.bind("<KeyRelease>", lambda event: self.load_points())
+
+
         self.map_widget = TkinterMapView(self, corner_radius=0)
         self.map_widget.grid(row=0, column=1, sticky="nsew")
+        self.map_widget.set_tile_server("https://tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png")
         self.map_widget.set_position(53.9024, 27.5614)
         self.map_widget.set_zoom(12)
 
@@ -88,6 +98,8 @@ class EcoApp(ctk.CTk):
     def load_points(self):
         for marker in self.map_markers: marker.delete()
         self.map_markers.clear()
+        search_query = self.search_entry.get().strip().lower()
+
         try:
             waste_translator = {
                 "PET-01": "Пластиковые бутылки (PET)",
@@ -100,6 +112,20 @@ class EcoApp(ctk.CTk):
             }
 
             for point in self.repo.get_points():
+                if search_query:
+                    match_found = False
+                    for code in point.wastes:
+                        clean_code = code.strip()
+                        human_name = waste_translator.get(clean_code, clean_code)
+                        
+                        if search_query in clean_code.lower() or search_query in human_name.lower():
+                            match_found = True
+                            break
+                    
+                    if not match_found:
+                        continue
+
+
                 reliability = point.math_model()
                 color = point.get_marker_color()
                 
@@ -122,10 +148,12 @@ class EcoApp(ctk.CTk):
                 for x in range(16):
                     for y in range(16):
                         if (x - 8)**2 + (y - 8)**2 <= 36: circle_icon.put(color, (x, y))
+                
                 new_marker = self.map_widget.set_marker(point.latitude, point.longitude, text="", icon=circle_icon, command=self.ctrl.handle_marker_click)
                 new_marker.data, new_marker.info = point.id, info_text
                 self.map_markers.append(new_marker)
-        except Exception as e: print(f"Ошибка: {e}")
+        except Exception as e: 
+            print(f"Ошибка: {e}")
 
 
 if __name__ == "__main__":

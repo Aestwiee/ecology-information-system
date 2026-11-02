@@ -78,3 +78,25 @@ class MapController:
             self.app.load_points()
         elif target_id is None:
             messagebox.showwarning("Ошибка", "Кликните точнее по кружку маркера для удаления!")
+
+    def geocode_address(self, address_text):
+            """Ищет координаты по введенному адресу"""
+            if not address_text.strip():
+                return None
+            
+            # Добавляем "Минск" к адресу, чтобы поиск не улетел в другую страну
+            search_query = address_text
+            if "минск" not in search_query.lower():
+                search_query += ", Минск, Беларусь"
+                
+            try:
+                geolocator = Nominatim(user_agent="ecology_navigator_app_v2")
+                # Ищем координаты
+                location = geolocator.geocode(search_query, timeout=10)
+                
+                if location:
+                    return (location.latitude, location.longitude)
+                return None
+            except Exception as e:
+                print(f"Ошибка геокодирования: {e}")
+                return None

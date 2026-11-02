@@ -64,35 +64,30 @@ class ModeratorPanel(ctk.CTkFrame):
         if not owner_name or owner_name == "—":
             messagebox.showwarning("Внимание", "Нет выбранного владельца для удаления.", parent=self)
             return
-
-        # Проверяем, есть ли у него точки
+        
         points_count = self.owners_repo.count_points_by_owner(owner_name)
 
         if points_count > 0:
-            # Если точки есть, задаем сложный вопрос
             msg = (f"У владельца '{owner_name}' есть {points_count} пункт(ов) на карте.\n\n"
                    f"ВНИМАНИЕ: Если вы удалите владельца, все его пункты и отзывы о них БУДУТ УДАЛЕНЫ С КАРТЫ.\n\n"
                    f"Вы уверены, что хотите продолжить?")
             confirm = messagebox.askyesno("Подтверждение удаления", msg, icon="warning", parent=self)
             if not confirm:
                 return
-            # Вызываем удаление вместе с точками
+
             self.owners_repo.delete_owner(owner_name, delete_points=True)
         else:
-            # Если точек нет, удаляем просто так
             confirm = messagebox.askyesno("Подтверждение", f"Удалить владельца '{owner_name}'?", parent=self)
             if not confirm:
                 return
             self.owners_repo.delete_owner(owner_name, delete_points=False)
 
-        # Обновляем список в интерфейсе
         messagebox.showinfo("Успех", f"Владелец '{owner_name}' успешно удален.", parent=self)
         
         owners = self.owners_repo.get_all_active()
         self.owner_selector.configure(values=owners if owners else ["—"])
         self.owner_selector.set(owners[0] if owners else "—")
         
-        # Перезагружаем карту, чтобы удаленные точки исчезли
         self.app.load_points()
 
     def _refresh_owner_list(self, new_name: str):
@@ -101,25 +96,40 @@ class ModeratorPanel(ctk.CTkFrame):
         self.owner_selector.set(new_name)
 
     def save_new_point(self): 
-        if self.app.clicked_lat is None or self.app.clicked_lng is None: 
-            messagebox.showwarning("Внимание", "Сначала кликните ПРАВОЙ кнопкой мыши по карте Минска и выберите 'Добавить пункт сюда'!")
-            return 
-            
-        name = self.name_entry.get() 
-        address = self.address_entry.get() 
+        name = self.name_entry.get().strip() 
+        address = self.address_entry.get().strip() 
         wastes = self.wastes_entry.get().upper()
         owner = self.owner_selector.get()
         
-        # Проверка, чтобы не добавить точку с несуществующим/пустым владельцем
+        if not name:
+            messagebox.showwarning("Внимание", "Введите название пункта!")
+            return
+
         if owner == "—" or not owner:
             messagebox.showwarning("Внимание", "Выберите владельца инфраструктуры!")
             return
 
+        lat, lng = self.app.clicked_lat, self.app.clicked_lng
+
+        if lat is None or lng is None:
+            if not address:
+                messagebox.showwarning("Внимание", "Кликните по карте ИЛИ введите текстовый адрес для поиска!")
+                return
+            
+            messagebox.showinfo("Поиск...", "Ищем указанный адрес на карте, подождите...")
+            coords = self.app.ctrl.geocode_address(address)
+            
+            if coords:
+                lat, lng = coords
+            else:
+                messagebox.showerror("Ошибка", f"Не удалось найти адрес: '{address}'.\nПопробуйте уточнить (например, 'ул. Ленина, 10') или кликните по карте вручную.")
+                return
+        
         conn = sqlite3.connect('ecology.db') 
         cursor = conn.cursor() 
         cursor.execute(
             "INSERT INTO eco_points (name, address, latitude, longitude, wastes, owner_name) VALUES (?, ?, ?, ?, ?, ?)", 
-            (name, address, self.app.clicked_lat, self.app.clicked_lng, wastes, owner)
+            (name, address, lat, lng, wastes, owner)
         ) 
         conn.commit() 
         conn.close() 
