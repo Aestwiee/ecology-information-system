@@ -26,7 +26,6 @@ def init_db():
     )
     """)
 
-    # НОВОЕ: справочник владельцев
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS owners (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +35,6 @@ def init_db():
     )
     """)
 
-    # Начальное заполнение (один раз, если пусто)
     cursor.execute("SELECT COUNT(*) FROM owners")
     if cursor.fetchone()[0] == 0:
         cursor.executemany(
